@@ -83,7 +83,7 @@ simple web example
 more examples
 -------------
 
-examples for routing, injection, delegation and custom racks, middleware and contexts could be found in the examples directory.
+examples for routing, injection, delegation, error handling and custom racks and contexts could be found in the examples directory.
 
 Thanks
 ------
