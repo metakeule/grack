@@ -7,9 +7,14 @@ import (
 	"net/http"
 )
 
-// middleware that makes use of AppContext
+// nice helpers that make use of NamedRack and LayoutContext
+func Name(c Ctx) string         { return c.Rack().(*NamedRack).Name }
+func SetLayout(c Ctx, l string) { c.(*LayoutContext).Layout = l }
+func Layout(c Ctx) string       { return c.(*LayoutContext).Layout }
+
+// middleware that makes use of LayoutContext (sets the layout)
 var pre = func(c Ctx, err error) {
-	c.(*AppContext).Layout = "<div style=\"background-color:green;color:white;padding:10px;\">%s</div>"
+	SetLayout(c, "<div style=\"background-color:green;color:white;padding:10px;\">%s</div>")
 	Next(c)
 }
 
@@ -19,35 +24,30 @@ var path = func(c Ctx, err error) {
 	Next(c)
 }
 
-// middleware that makes use of AppContext
-var post = func(c Ctx, err error) {
-	SetOut(c, fmt.Sprintf(c.(*AppContext).Layout, Out(c)))
-}
+// middleware that makes use of LayoutContext (embeds the context into the layout)
+var post = func(c Ctx, err error) { SetOut(c, fmt.Sprintf(Layout(c), Out(c))) }
 
-// responder that makes use of AppRack
+// responder that makes use of NamedRack
 func responder(c Ctx, err error) {
 	HTML(c)
-	hc := c.(HTTPContexter).HTTPContext_()
-	hc.Out = "<html><body><h1>App: " + c.Ctx().Rack.(*AppRack).App + "</h1>" + hc.Out + "</body></html>"
-	Flush(hc)
+	SetOut(c, "<html><body><h1>Name: '"+Name(c)+"'</h1>"+Out(c)+"</body></html>")
+	Flush(c)
 }
 
-type AppContext struct {
+type LayoutContext struct {
 	*HTTPContext        // important
-	Layout       string // specific property
+	Layout       string // additional property
 }
 
-type AppRack struct {
+type NamedRack struct {
 	*HTTPRack        // important
-	App       string // specific property
+	Name      string // additional property
 }
 
-// important: overwrite this to use the AppContext
-func (h *AppRack) NewContext() (c HTTPContexter) {
-	return &AppContext{HTTPContext: NewContext()}
-}
+// important: overwrite this to use the LayoutContext
+func (h *NamedRack) NewContext() (c HTTPContexter) { return &LayoutContext{HTTPContext: NewContext()} }
 
-var rack = &AppRack{HTTPRack: NewRack(), App: "green layouter"}
+var rack = &NamedRack{HTTPRack: NewRack(), Name: "greened"}
 
 func init() {
 	rack.Push(pre)

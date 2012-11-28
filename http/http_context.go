@@ -47,6 +47,7 @@ type HTTPContext struct {
 type HTTPContexter interface {
 	Contexter
 	HTTPContext_() *HTTPContext
+	Rack() Racker
 }
 
 func (c *HTTPContext) HTTPContext_() *HTTPContext {
@@ -55,6 +56,10 @@ func (c *HTTPContext) HTTPContext_() *HTTPContext {
 
 func (c *HTTPContext) Ctx() *ContextData {
 	return c.ContextData
+}
+
+func (c *HTTPContext) Rack() (r Racker) {
+	return c.ContextData.Rack
 }
 
 func NewContext() *HTTPContext {
