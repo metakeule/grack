@@ -56,7 +56,7 @@ func (c *middlewareCaller) Call(ctx Contexter, err error) {
 }
 
 func (r *HTTPRack) NewContext() (c HTTPContexter) {
-	return NewContext()
+	return NewHTTPContext()
 }
 
 func (r *HTTPRack) Push(i interface{}) {

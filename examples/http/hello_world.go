@@ -16,7 +16,7 @@ func world(c Ctx, err error) {
 	SetOut(c, Out(c)+" world!\nYour Path is: "+Path(c))
 }
 
-var rack = NewRack()
+var rack = NewHTTPRack()
 
 func init() {
 	rack.Push(hello)

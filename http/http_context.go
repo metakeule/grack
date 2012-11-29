@@ -62,6 +62,6 @@ func (c *HTTPContext) Rack() (r Racker) {
 	return c.ContextData.Rack
 }
 
-func NewContext() *HTTPContext {
+func NewHTTPContext() *HTTPContext {
 	return &HTTPContext{ContextData: &ContextData{}}
 }

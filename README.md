@@ -67,7 +67,7 @@ simple web example
 		SetOut(c, Out(c)+" world!\nYour Path is: "+Path(c))
 	}
 
-	var rack = NewRack()
+	var rack = NewHTTPRack()
 
 	func init() {
 		rack.Push(hello)

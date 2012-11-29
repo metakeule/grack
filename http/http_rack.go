@@ -74,7 +74,7 @@ func HTTPResponder(c Ctx, err error) {
 	Flush(hc)
 }
 
-func NewRack() *HTTPRack {
+func NewHTTPRack() *HTTPRack {
 	rck := &HTTPRack{Rack: R.NewRack()}
 	rck.SetResponder(HTTPResponder)
 	return rck

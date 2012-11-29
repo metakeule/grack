@@ -45,9 +45,11 @@ type NamedRack struct {
 }
 
 // important: overwrite this to use the LayoutContext
-func (h *NamedRack) NewContext() (c HTTPContexter) { return &LayoutContext{HTTPContext: NewContext()} }
+func (h *NamedRack) NewContext() (c HTTPContexter) {
+	return &LayoutContext{HTTPContext: NewHTTPContext()}
+}
 
-var rack = &NamedRack{HTTPRack: NewRack(), Name: "greened"}
+var rack = &NamedRack{HTTPRack: NewHTTPRack(), Name: "greened"}
 
 func init() {
 	rack.Push(pre)
