@@ -88,6 +88,12 @@ func JSON(c HTTPContexter, i ...interface{}) {
 	}
 }
 
+// TODO make a type switch and let it accept templates
+func CSS(c HTTPContexter, s string) {
+	SetContentType(c, "text/css")
+	SetOut(c, s)
+}
+
 func DebugRequest(r *http.Request) (debug map[string]string) {
 	debug = map[string]string{}
 	debug["Method"] = r.Method
