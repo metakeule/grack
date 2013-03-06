@@ -3,87 +3,48 @@ grack - racks for go
 
 grack is inspired by Christian Neukirchens rack (for Ruby).
 
-It offers a general way to stack middleware and is not focussed on
-web stacks.
+It offers a way to organize middleware.
 
-It has the basic infrastructure for your own racks,
-middlewares and routers.
+You may build your own customized racks on the basic implementation.
 
 simple example
 --------------
 
-	package main
+```go
+package main
 
-	import (
-		"fmt"
-		. "github.com/metakeule/grack"
-		. "github.com/metakeule/grack/base"
-	)
+import (
+	"fmt"
+	"github.com/metakeule/grack"
+	"net/http"
+)
 
-	func hello(c Contexter, err error) {
-		SetIn(c, "Hello")
-		Next(c)
-	}
+func hello(r grack.Racker) {
+	r.Set("out", "Hello")
+	r.Next()
+}
 
-	func world(c Contexter, err error) {
-		SetOut(c, InString(c)+" world!")
-	}
+func world(r grack.Racker) {
+	r.TextString(r.GetString("out") + " world!\nYour Path is: " + r.Request().URL.RequestURI())
+}
 
-	func print(c Contexter, err error) {
-		fmt.Println(Out(c))
-	}
+var rack = grack.NewRack()
 
-	var rack = NewRack()
+func init() {
+	rack.PushFunc(hello)
+	rack.PushFunc(world)
+}
 
-	func init() {
-		rack.Push(hello)
-		rack.Push(world)
-		rack.SetResponder(print)
-	}
+func main() {
+	fmt.Println("look at http://localhost:8080/strange")
+	http.ListenAndServe(":8080", rack)
+}
+```
 
-	func main() {
-		Run(rack, NewIO())
-	}
+more examples to come
+---------------------
 
-
-simple web example
-------------------
-
-	package main
-
-	import (
-		"fmt"
-		. "github.com/metakeule/grack"
-		. "github.com/metakeule/grack/http"
-		"net/http"
-	)
-
-	func hello(c Ctx, err error) {
-		SetOut(c, "Hello")
-		Next(c)
-	}
-
-	func world(c Ctx, err error) {
-		SetOut(c, Out(c)+" world!\nYour Path is: "+Path(c))
-	}
-
-	var rack = NewHTTPRack()
-
-	func init() {
-		rack.Push(hello)
-		rack.Push(world)
-	}
-
-	func main() {
-		fmt.Println("look at http://localhost:8080/strange")
-		http.ListenAndServe(":8080", NewServer(rack))
-	}
-
-
-more examples
--------------
-
-examples for routing, injection, delegation, error handling and custom racks and contexts could be found in the examples directory.
+examples for routing, injection, delegation, error handling and custom racks will be found in the examples directory.
 
 Thanks
 ------
