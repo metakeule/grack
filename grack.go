@@ -1,11 +1,11 @@
 package grack
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	ŧ "fmt"
+	"github.com/metakeule/fastreplace"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,9 +26,8 @@ type Rack struct {
 	ħ.ResponseWriter
 	CheckResponse bool       // check if xml and json strings are valid
 	HiJacker      RackerFull // a hijacker that allows interception of calls
-	Buffer        *bytes.Buffer
-	readwriter    *bufio.ReadWriter
 
+	layout             fastreplace.Replacer
 	middlewares        []Middleware
 	app                Middleware
 	errorHandler       Middleware
@@ -57,6 +56,22 @@ func NewRack() (ø *Rack) {
 	}
 	ø.middlewares = []Middleware{}
 	return
+}
+
+func (ø *Rack) SetLayout(l fastreplace.Replacer) {
+	ø.layout = l
+}
+
+func (ø *Rack) Layout() fastreplace.Replacer {
+	return ø.layout
+}
+
+func (ø *Rack) WriteLayout() (i int, ſ error) {
+	if ø.layout == nil {
+		ſ = ŧ.Errorf("no layout set, use SetLayout()")
+		return
+	}
+	return ø.Write(ø.layout.Replace())
 }
 
 func (ø *Rack) Set(key string, i interface{}) {
@@ -115,6 +130,12 @@ func (ø *Rack) Pos() (i int, e error) {
 		e = ŧ.Errorf("pointer %v not in middleware stack", ø.pointer)
 	}
 	return
+}
+
+func (ø *Rack) Flush() {
+	if f, ok := ø.ResponseWriter.(ħ.Flusher); ok {
+		f.Flush()
+	}
 }
 
 func (ø *Rack) Name() string {
@@ -317,17 +338,11 @@ func (ø *Rack) Run() {
 	ø.backtrace = []string{}
 	ø.finished = false
 	ø.pointer = 0
+	ø.layout = nil
 	if DEBUG {
 		ø.debugMwCalls = []int{}
 	}
 	ø.callMiddleware()
-}
-
-func (ø *Rack) InitBuffer() {
-	ø.Buffer = &bytes.Buffer{}
-	ø.readwriter = bufio.NewReadWriter(
-		bufio.NewReader(ø.Buffer),
-		bufio.NewWriter(ø.ResponseWriter))
 }
 
 func (ø *Rack) RaiseRecovered(err error, backtrace ...string) {
@@ -595,33 +610,9 @@ func (ø *Rack) Error() (status int, err error, backtrace []string, recovered bo
 	return
 }
 
-func (ø *Rack) Finish() {
-	ø.finished = true
-}
-
-func (ø *Rack) FlushBuffer() (ſ error) {
-	ø.InitBuffer()
-	if ø.Buffer == nil || ø.readwriter == nil {
-		ſ = ŧ.Errorf("no buffer available, call InitBuffer() first")
-		return
-	}
-	return ø.readwriter.Flush()
-}
-
-func (ø *Rack) WriteString(s string) (int, error) {
-	if ø.Buffer != nil {
-		return ø.Buffer.WriteString(s)
-	}
-	return ø.ResponseWriter.Write([]byte(s))
-}
-
-func (ø *Rack) Write(b []byte) (int, error) {
-	if ø.Buffer != nil {
-		return ø.Buffer.Write(b)
-	}
-	return ø.ResponseWriter.Write(b)
-}
-
+func (ø *Rack) Finish()                              { ø.finished = true }
+func (ø *Rack) WriteString(s string) (int, error)    { return ø.ResponseWriter.Write([]byte(s)) }
+func (ø *Rack) Write(b []byte) (int, error)          { return ø.ResponseWriter.Write(b) }
 func (ø *Rack) HasError() bool                       { return ø.error != nil }
 func (ø *Rack) Get(key string) (i interface{})       { return ø.params[key] }
 func (ø *Rack) IsSet(key string) bool                { return ø.params.IsSet(key) }

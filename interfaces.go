@@ -1,6 +1,7 @@
 package grack
 
 import (
+	"github.com/metakeule/fastreplace"
 	ħ "net/http"
 )
 
@@ -18,6 +19,7 @@ type Racker interface {
 
 	// raw
 	ħ.ResponseWriter
+	WriteString(s string) (int, error)
 	GetResponseWriter() ħ.ResponseWriter
 	Request() *ħ.Request
 
@@ -29,6 +31,14 @@ type Racker interface {
 	JumpToApp()
 	Delegate(target RackerFull)
 	Inject(target RackerFull)
+
+	// buffer
+	Flush()
+
+	// layout
+	SetLayout(fastreplace.Replacer)
+	Layout() fastreplace.Replacer
+	WriteLayout() (i int, ſ error)
 
 	// shortcuts
 	SetHeader(k string, v string)
