@@ -2,6 +2,7 @@ package grack
 
 import (
 	// ŧ "fmt"
+	ħ "net/http"
 	"reflect"
 	"runtime"
 	"strings"
@@ -37,5 +38,17 @@ var DEBUG = false
 
 // see http://stackoverflow.com/questions/7052693/how-to-get-the-name-of-a-function-in-go
 func GetFunctionName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	fn := runtime.FuncForPC(reflect.ValueOf(i).Pointer())
+	if fn != nil {
+		return fn.Name()
+	}
+	return ""
+}
+
+func HandleFunc(fn func(w ħ.ResponseWriter, r *ħ.Request)) Middleware {
+	return MiddlewareFunc(func(r Racker) { fn(r, r.Request()) })
+}
+
+func Handle(handler ħ.Handler) Middleware {
+	return MiddlewareFunc(func(r Racker) { handler.ServeHTTP(r, r.Request()) })
 }

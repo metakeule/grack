@@ -1,6 +1,7 @@
 package grack
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
@@ -25,6 +26,8 @@ type Rack struct {
 	ħ.ResponseWriter
 	CheckResponse bool       // check if xml and json strings are valid
 	HiJacker      RackerFull // a hijacker that allows interception of calls
+	Buffer        *bytes.Buffer
+	readwriter    *bufio.ReadWriter
 
 	middlewares        []Middleware
 	app                Middleware
@@ -220,8 +223,12 @@ func (ø *Rack) DebugRawDetails() (r map[string]interface{}) {
 	return
 }
 
-func (ø *Rack) Json(v interface{}) {
+func (ø *Rack) SetContentTypeJson() {
 	ø.SetContentType("application/json; charset=utf-8")
+}
+
+func (ø *Rack) Json(v interface{}) {
+	ø.SetContentTypeJson()
 	enc := json.NewEncoder(ø)
 	ſ := enc.Encode(v)
 	if ſ != nil {
@@ -240,7 +247,7 @@ func (ø *Rack) JsonString(jsonStr string) {
 			panic("not a valid json: " + ſ.Error())
 		}
 	}
-	ø.SetContentType("application/json; charset=utf-8")
+	ø.SetContentTypeJson()
 	ø.Write([]byte(jsonStr))
 }
 
@@ -287,6 +294,9 @@ func (ø *Rack) PushFunc(fn func(Racker)) {
 func (ø *Rack) Push(mw Middleware) {
 	if DEBUG {
 		num := 2
+		if ø.debugMw == nil {
+			ø.debugMw = map[int]*debugCall{}
+		}
 		ø.debugMw[len(ø.middlewares)] = DebugCall(num)
 	}
 	ø.push(mw)
@@ -311,6 +321,13 @@ func (ø *Rack) Run() {
 		ø.debugMwCalls = []int{}
 	}
 	ø.callMiddleware()
+}
+
+func (ø *Rack) InitBuffer() {
+	ø.Buffer = &bytes.Buffer{}
+	ø.readwriter = bufio.NewReadWriter(
+		bufio.NewReader(ø.Buffer),
+		bufio.NewWriter(ø.ResponseWriter))
 }
 
 func (ø *Rack) RaiseRecovered(err error, backtrace ...string) {
@@ -342,13 +359,14 @@ func (ø *Rack) Raise(status int, err error, backtrace ...string) {
 	}
 
 	if ø.errorHandler == nil {
-		log.Fatal("No Error Handler, Taking default")
-		log.Printf("Error %s (%v - %s)\n%v\n", err.Error(), status, ħ.StatusText(status), strings.Join(backtrace, "\n"))
+		log.Println("No Error Handler defined, taking default")
 		if ø.mode == "development" {
 			ø.HtmlString(ŧ.Sprintf("<html><body><h1>Error %s (%v - %s)</h1><p>%s</p></body></html>", err.Error(), status, ħ.StatusText(status), strings.Join(backtrace, "<br />")))
 		} else {
+			log.Printf(`If you want the backtrace in the html output, set mode to "development" (is currently: %#v)`, ø.mode)
 			ø.HtmlString(ŧ.Sprintf("<html><body><h1>Error (%v - %s)</h1></body></html>", status, ħ.StatusText(status)))
 		}
+		log.Printf("Error %s (%v - %s)\n%v\n", err.Error(), status, ħ.StatusText(status), strings.Join(backtrace, "\n"))
 		return
 	}
 	ø.error = err
@@ -365,6 +383,7 @@ func (ø *Rack) Call(r Racker) {
 	ø.SetParams(parent.Params())
 	ø.SetResponseWriter(parent.GetResponseWriter())
 	ø.SetParent(parent)
+	ø.SetMode(parent.Mode())
 	ø.Run()
 	if ø.IsFinished() {
 		parent.Finish()
@@ -376,6 +395,7 @@ func (ø *Rack) Delegate(target RackerFull) {
 	target.ResetParams()
 	target.SetParams(ø.Params())
 	target.SetResponseWriter(ø.ResponseWriter)
+	target.SetMode(ø.Mode())
 	target.Run()
 	if target.IsFinished() {
 		ø.Finish()
@@ -388,6 +408,7 @@ func (ø *Rack) Inject(target RackerFull) {
 	target.SetParams(ø.Params())
 	target.SetResponseWriter(ø.ResponseWriter)
 	target.SetParent(ø)
+	target.SetMode(ø.Mode())
 	target.Run()
 	if target.IsFinished() {
 		ø.Finish()
@@ -574,6 +595,33 @@ func (ø *Rack) Error() (status int, err error, backtrace []string, recovered bo
 	return
 }
 
+func (ø *Rack) Finish() {
+	ø.finished = true
+}
+
+func (ø *Rack) FlushBuffer() (ſ error) {
+	ø.InitBuffer()
+	if ø.Buffer == nil || ø.readwriter == nil {
+		ſ = ŧ.Errorf("no buffer available, call InitBuffer() first")
+		return
+	}
+	return ø.readwriter.Flush()
+}
+
+func (ø *Rack) WriteString(s string) (int, error) {
+	if ø.Buffer != nil {
+		return ø.Buffer.WriteString(s)
+	}
+	return ø.ResponseWriter.Write([]byte(s))
+}
+
+func (ø *Rack) Write(b []byte) (int, error) {
+	if ø.Buffer != nil {
+		return ø.Buffer.Write(b)
+	}
+	return ø.ResponseWriter.Write(b)
+}
+
 func (ø *Rack) HasError() bool                       { return ø.error != nil }
 func (ø *Rack) Get(key string) (i interface{})       { return ø.params[key] }
 func (ø *Rack) IsSet(key string) bool                { return ø.params.IsSet(key) }
@@ -586,7 +634,6 @@ func (ø *Rack) GetInt(key string) int                { return ø.params.Int(key
 func (ø *Rack) GetStrings(key string) []string       { return ø.params.Strings(key) }
 func (ø *Rack) GetBools(key string) []bool           { return ø.params.Bools(key) }
 func (ø *Rack) GetInts(key string) []int             { return ø.params.Ints(key) }
-func (ø *Rack) Finish()                              { ø.finished = true }
 func (ø *Rack) Mode() string                         { return ø.mode }
 func (ø *Rack) Len() int                             { return len(ø.middlewares) }
 func (ø *Rack) HasApp() bool                         { return ø.app != nil }
@@ -606,7 +653,6 @@ func (ø *Rack) HtmlString(html string)               { ø.Write([]byte(html)) }
 func (ø *Rack) SetHeader(k string, v string)         { h := ø.Header(); h.Set(k, v) }
 func (ø *Rack) SetContentType(t string)              { ø.SetHeader("Content-Type", t) }
 func (ø *Rack) TextString(text string)               { ø.SetContentType("text/plain"); ø.Write([]byte(text)) }
-func (ø *Rack) Write(b []byte) (int, error)          { return ø.ResponseWriter.Write(b) }
 func (ø *Rack) Skip(n int)                           { ø.pointer = ø.pointer + n; ø.Next() }
 func (ø *Rack) GoTo(p int)                           { ø.pointer = p; ø.callMiddleware() } // goto a position p within the middleware stack, handle with care
 func (ø *Rack) Next()                                { ø.pointer++; ø.callMiddleware() }
