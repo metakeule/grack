@@ -58,6 +58,18 @@ func NewRack() (ø *Rack) {
 	return
 }
 
+func (ø *Rack) New() (n *Rack) {
+	n = &Rack{}
+	n.CheckResponse = ø.CheckResponse
+	n.layout = ø.layout
+	n.middlewares = ø.middlewares
+	n.app = ø.app
+	n.errorHandler = ø.errorHandler
+	n.mode = ø.mode
+	n.name = ø.name
+	return
+}
+
 func (ø *Rack) SetLayout(l fastreplace.Replacer) {
 	ø.layout = l
 }
@@ -400,6 +412,7 @@ func (ø *Rack) Call(r Racker) {
 	ø.SetParent(parent)
 	ø.SetMode(parent.Mode())
 	ø.Run()
+	parent.SetParams(ø.Params())
 	if ø.IsFinished() {
 		parent.Finish()
 	}
@@ -412,6 +425,7 @@ func (ø *Rack) Delegate(target RackerFull) {
 	target.SetResponseWriter(ø.ResponseWriter)
 	target.SetMode(ø.Mode())
 	target.Run()
+	ø.SetParams(target.Params())
 	if target.IsFinished() {
 		ø.Finish()
 	}
@@ -425,6 +439,7 @@ func (ø *Rack) Inject(target RackerFull) {
 	target.SetParent(ø)
 	target.SetMode(ø.Mode())
 	target.Run()
+	ø.SetParams(target.Params())
 	if target.IsFinished() {
 		ø.Finish()
 	}
@@ -517,11 +532,12 @@ func (ø *Rack) CallMiddleware() {
 }
 
 func (ø *Rack) ServeHTTP(writer ħ.ResponseWriter, request *ħ.Request) {
-	ø.SetResponseWriter(writer)
-	ø.SetRequest(request)
-	ø.ResetParams()
-	ø.ParseParams()
-	ø.Run()
+	n := ø.New()
+	n.SetResponseWriter(writer)
+	n.SetRequest(request)
+	n.ResetParams()
+	n.ParseParams()
+	n.Run()
 }
 
 // stolen from https://bitbucket.org/kardianos/staticserv/src/66d4675d9ed9897fe218d2dac5eca4b18e05cad2/main.go?at=default
