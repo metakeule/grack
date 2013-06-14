@@ -1,5 +1,9 @@
 package grack
 
+import (
+	"net/http"
+)
+
 func MiddlewareFunc(fn func(Racker)) *middlewareFunc {
 	name := GetFunctionName(fn)
 	return &middlewareFunc{fn, name}
@@ -16,4 +20,11 @@ func (ø middlewareFunc) Name() string  { return ø.name }
 type Middleware interface {
 	Call(Racker)
 	Name() string
+}
+
+func MiddlewareHandler(h http.Handler, name string) *middlewareFunc {
+	fn := func(r Racker) {
+		h.ServeHTTP(r, r.Request())
+	}
+	return &middlewareFunc{fn, name}
 }

@@ -83,7 +83,7 @@ func (ø *Rack) WriteLayout() (i int, ſ error) {
 		ſ = ŧ.Errorf("no layout set, use SetLayout()")
 		return
 	}
-	return ø.Write(ø.layout.Replace())
+	return ø.Write(ø.layout.Bytes())
 }
 
 func (ø *Rack) Set(key string, i interface{}) {
