@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	ŧ "fmt"
-	"github.com/metakeule/fastreplace"
+	"github.com/metakeule/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -27,7 +27,7 @@ type Rack struct {
 	CheckResponse bool       // check if xml and json strings are valid
 	HiJacker      RackerFull // a hijacker that allows interception of calls
 
-	layout             fastreplace.Replacer
+	layout             template.Instancer
 	middlewares        []Middleware
 	app                Middleware
 	errorHandler       Middleware
@@ -70,11 +70,11 @@ func (ø *Rack) New() (n *Rack) {
 	return
 }
 
-func (ø *Rack) SetLayout(l fastreplace.Replacer) {
+func (ø *Rack) SetLayout(l template.Instancer) {
 	ø.layout = l
 }
 
-func (ø *Rack) Layout() fastreplace.Replacer {
+func (ø *Rack) Layout() template.Instancer {
 	return ø.layout
 }
 

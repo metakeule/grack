@@ -1,7 +1,7 @@
 package grack
 
 import (
-	"github.com/metakeule/fastreplace"
+	"github.com/metakeule/template"
 	ħ "net/http"
 )
 
@@ -36,8 +36,8 @@ type Racker interface {
 	Flush()
 
 	// layout
-	SetLayout(fastreplace.Replacer)
-	Layout() fastreplace.Replacer
+	SetLayout(template.Instancer)
+	Layout() template.Instancer
 	WriteLayout() (i int, ſ error)
 
 	// shortcuts
